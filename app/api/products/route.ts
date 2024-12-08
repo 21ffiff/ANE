@@ -12,8 +12,8 @@ export async function GET() {
 
         return NextResponse.json(data, {
             headers: {
-                "Cache-Control": "no-store"
-            }
+                "Cache-Control": "no-store", 
+            },
         });
     }catch (error: unknown){
         const errorMessage = error instanceof Error ? error.message: "An unknown Error occured";
