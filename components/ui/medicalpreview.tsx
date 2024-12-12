@@ -21,14 +21,14 @@ interface Products {
   link: string;
 }
 
-const fetchProducts = async (): Promise<Products[]> => {
-  const res = await fetch("/api/products", {
-    method: "GET",
-    cache: "no-store"
-  });
-  if (!res.ok) throw new Error("Gagal fetch data api products");
-  return await res.json();
-};
+// const fetchProducts = async (): Promise<Products[]> => {
+//   const res = await fetch("/api/products", {
+//     method: "GET",
+//     cache: "no-store"
+//   });
+//   if (!res.ok) throw new Error("Gagal fetch data api products");
+//   return await res.json();
+// };
 
 
 const MedicalSparePartsPreview = () => {
