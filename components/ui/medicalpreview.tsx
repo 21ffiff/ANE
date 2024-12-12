@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingCart, Package } from "lucide-react"
 import Link from "next/link"
-import { useQuery } from "@tanstack/react-query";
+// import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase"; // Import Supabase client
 
 interface Products {
   id: string;
@@ -30,21 +32,61 @@ const fetchProducts = async (): Promise<Products[]> => {
 
 
 const MedicalSparePartsPreview = () => {
-  
-  const { data: products, isLoading, isError } = useQuery<Products[]>({
-    queryKey: ["products"],
-    queryFn: fetchProducts,
-    refetchOnWindowFocus: true, // Refetch when the window regains focus
-    refetchOnMount: true, // Refetch when the component mounts
-    refetchInterval: 5000, //Polling setiap 5 detik
-  });
+  // const { data: initialProducts, isLoading, isError } = useQuery<Products[]>({
+  //   queryKey: ["products"],
+  //   queryFn: fetchProducts,
+  //   refetchOnWindowFocus: false, // Refetch when the window regains focus
+  //   refetchOnMount: false,
+  // });
 
-  if (isLoading) return <p>Loading data produk...</p>;
+  const [products, setProducts] = useState<Products[]>([]);
 
-  if (isError) return <p>Terjadi kesalahan saat memuat data produk.</p>;
+  // Fetch data awal dari Supabase
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      const { data, error } = await supabase.from("Products").select("*");
+      if (error) {
+        console.error("Error fetching initial data:", error);
+        return;
+      }
+      setProducts(data || []);
+    };
+
+    fetchInitialData();
+  }, []);
+
+  // Listener untuk perubahan data di tabel Products
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime:products")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "Products" },
+        (payload) => {
+          console.log("Change received!", payload);
+          if (payload.eventType === "INSERT") {
+            setProducts((prev) => [payload.new as Products, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            setProducts((prev) =>
+              prev.map((product) =>
+                product.id === payload.new.id ? (payload.new as Products) : product
+              )
+            );
+          } else if (payload.eventType === "DELETE") {
+            setProducts((prev) =>
+              prev.filter((product) => product.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   if (!products || products.length === 0) return <p>Produk tidak tersedia.</p>;
-  
 
   return (
     <div className="container mx-auto px-4 py-6 ">
